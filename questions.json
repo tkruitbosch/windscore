@@ -1,0 +1,22 @@
+[
+  { "round": 1,  "question": "Which team had the most creative Shark Tank opening?" },
+  { "round": 2,  "question": "Which innovation has the most potential to make the positive impact?" },
+  { "round": 3,  "question": "How would you distribute your Venture Capital across the teams?" },
+  { "round": 4,  "question": "where can you contribute and take innovations to the next level?" },
+  { "round": 5,  "question": "Which team burnt the most tokens?" },
+  { "round": 6,  "question": "Which innovation is most production ready?" },
+  { "round": 7,  "question": "Who revealed the best insights and best patterns for how to use AI?" },
+  { "round": 8,  "question": "Which team has the funniest innovation idea?" },
+  { "round": 9,  "question": "Which team best addressed AI adoption and human factors?" },
+  { "round": 10, "question": "Which team had the most convincing argument?" },
+  { "round": 11, "question": "Who surprised you the most (in a good way)?" },
+  { "round": 12, "question": "Which innovation can be directly incorporated in our XT offerings?" },
+  { "round": 13, "question": "Which team was the most well-prepared for the Shark Tank?" },
+  { "round": 14, "question": "Which team showed the best problem-solving skills?" },
+  { "round": 15, "question": "Which team showed the most energy and enthusiasm?" },
+  { "round": 16, "question": "Who impressed you most with their knowledge?" },
+  { "round": 17, "question": "Which presented innovation will give XT a competitive edge?" },
+  { "round": 18, "question": "Who made the best use of the resources available?" },
+  { "round": 19, "question": "Which team showed the most resilience?" },
+  { "round": 20, "question": "Who deserves the XT innovation Award?" }
+]

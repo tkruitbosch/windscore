@@ -1,0 +1,15 @@
+{
+  "name": "windscore",
+  "version": "2.0.0",
+  "description": "Multiplayer windsurfing team scoring game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.7.2"
+  }
+}

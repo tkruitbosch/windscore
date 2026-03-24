@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <title>WindScore 🏄</title>
+  <link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito', sans-serif; touch-action: manipulation; }
+
+    /* ── LOBBY ── */
+    #screen-lobby {
+      position: fixed; inset: 0; z-index: 80;
+      background: linear-gradient(160deg, #0a2f6e 0%, #1565C0 45%, #29B6F6 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px; text-align: center;
+    }
+    .lobby-logo { font-family: 'Boogaloo', cursive; font-size: 60px; color: #FFD600;
+      text-shadow: 3px 5px 0 rgba(0,0,0,0.25); letter-spacing: 3px; line-height: 1; }
+    .lobby-icon { font-size: 72px; margin-bottom: 8px; animation: bob 2.5s ease-in-out infinite; }
+    @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    .lobby-msg { color: rgba(255,255,255,0.7); font-size: 15px; font-weight: 700; margin-top: 18px; }
+    .lobby-pulse { width: 12px; height: 12px; background: #6BCB77; border-radius: 50%;
+      display: inline-block; margin-right: 6px;
+      animation: pulse 1.4s ease-in-out infinite; vertical-align: middle; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+    /* ── GAME SCENE ── */
+    #screen-game { position: fixed; inset: 0; display: none; }
+    .g-sky {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom,#0d3b8c 0%,#1565C0 20%,#1E88E5 40%,#64B5F6 62%,#B3E5FC 80%,#E1F5FE 92%,#FFF9C4 100%);
+    }
+    .g-sun { position:absolute;top:9%;right:10%;width:56px;height:56px;
+      background:radial-gradient(circle at 50% 50%,#FFF9C4 30%,#FFD600 60%,rgba(255,200,0,0) 100%);
+      border-radius:50%;box-shadow:0 0 0 8px rgba(255,220,0,.12),0 0 40px 20px rgba(255,200,0,.25); }
+    .cloud { position:absolute;border-radius:60px;background:rgba(255,255,255,0.82);
+      animation:cloudDrift linear infinite; }
+    @keyframes cloudDrift{from{transform:translateX(110vw)}to{transform:translateX(-130%)}}
+    .g-ocean { position:absolute;bottom:0;left:0;right:0;height:56%;
+      background:linear-gradient(180deg,#0277BD 0%,#01579B 28%,#012f5e 100%); }
+    .waves-bg { position:absolute;inset:0;overflow:hidden;pointer-events:none; }
+    .wave-svg { position:absolute;left:0;width:200%; }
+    .wave-svg.w1{top:-22px;animation:wMove 7s linear infinite;opacity:.9}
+    .wave-svg.w2{top:-10px;animation:wMove 10s linear infinite reverse;opacity:.55}
+    .wave-svg.w3{top:5px;animation:wMove 14s linear infinite;opacity:.35}
+    @keyframes wMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    .finish-line{position:absolute;top:0;right:5%;width:4px;height:100%;z-index:6;
+      background:repeating-linear-gradient(to bottom,#FFD600 0,#FFD600 10px,#111 10px,#111 20px);opacity:.75}
+    .finish-flag{position:absolute;top:6px;left:6px;font-size:18px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+    .finish-glow{position:absolute;top:0;right:calc(5% - 20px);width:44px;height:100%;
+      background:linear-gradient(to right,transparent,rgba(255,214,0,.08),transparent);pointer-events:none;z-index:5}
+
+    /* header */
+    .g-header{position:absolute;top:0;left:0;right:0;padding:11px 14px;
+      display:flex;align-items:center;justify-content:space-between;z-index:40}
+    .g-logo{font-family:'Boogaloo',cursive;font-size:24px;color:#FFD600;text-shadow:2px 2px 0 rgba(0,0,0,.35)}
+    .round-badge{background:rgba(0,0,0,.42);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.14);border-radius:20px;
+      padding:5px 12px;color:rgba(255,255,255,.85);font-size:12px;font-weight:800}
+    .round-badge b{color:#FFD600;font-family:'Boogaloo',cursive;font-size:15px;font-weight:400}
+
+    /* score panel */
+    .g-scores{position:absolute;top:48px;right:10px;z-index:40;
+      background:rgba(0,0,0,.42);backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:9px 11px;min-width:118px}
+    .gs-title{font-size:9px;font-weight:900;color:rgba(255,255,255,.35);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:6px}
+    .gs-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+    .gs-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    .gs-name{flex:1;color:white;font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:64px}
+    .gs-val{color:#FFD600;font-family:'Boogaloo',cursive;font-size:16px;line-height:1}
+
+    /* surfer */
+    .surfer-wrap{position:absolute;z-index:20;transition:left 1.3s cubic-bezier(.34,1.4,.64,1)}
+    .surfer-anim{animation:surferBob 2.2s ease-in-out infinite;transform-origin:center bottom}
+    @keyframes surferBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}
+    .surfer-label{position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);
+      background:rgba(0,0,0,.55);border-radius:8px;padding:2px 7px;
+      color:white;font-size:10px;font-weight:900;white-space:nowrap}
+    .score-pop{position:absolute;top:-38px;left:50%;transform:translateX(-50%);
+      background:#FFD600;border-radius:20px;padding:2px 9px;
+      color:#1a1000;font-family:'Boogaloo',cursive;font-size:17px;
+      animation:popFloat 1.6s ease-out forwards;pointer-events:none;white-space:nowrap}
+    @keyframes popFloat{0%{opacity:1;transform:translateX(-50%) translateY(0)}100%{opacity:0;transform:translateX(-50%) translateY(-44px)}}
+    .winner-ring{position:absolute;top:-12px;left:-12px;right:-12px;bottom:-12px;border-radius:50%;
+      border:3px solid #FFD600;animation:winPulse .6s ease-in-out infinite alternate;pointer-events:none}
+    @keyframes winPulse{from{opacity:.4;transform:scale(.96)}to{opacity:1;transform:scale(1.04)}}
+
+    /* status bar */
+    .status-bar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+      background:rgba(0,0,0,.42);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,.12);border-radius:24px;
+      padding:8px 18px;color:rgba(255,255,255,.7);font-size:12px;font-weight:800;
+      white-space:nowrap;z-index:40;transition:all .3s}
+    .status-bar.waiting{color:rgba(255,255,255,.5)}
+    .status-bar.open{color:#FFD600;border-color:rgba(255,214,0,.3)}
+    .status-bar.submitted{color:#6BCB77;border-color:rgba(107,203,119,.3)}
+
+    /* ── ROUND OVERLAY ── */
+    #q-overlay{position:fixed;inset:0;z-index:60;
+      background:rgba(0,12,35,.62);backdrop-filter:blur(5px);
+      display:none;align-items:flex-end}
+    .q-sheet{background:linear-gradient(165deg,#071e3d 0%,#0e3260 100%);
+      border-top:1.5px solid rgba(255,255,255,.12);border-radius:26px 26px 0 0;
+      padding:16px 18px 40px;width:100%;max-height:82vh;overflow-y:auto;
+      animation:sheetUp .38s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .sheet-handle{width:38px;height:4px;background:rgba(255,255,255,.16);border-radius:4px;margin:0 auto 15px}
+    .sq-round{font-size:11px;font-weight:900;color:#FFD600;letter-spacing:3px;text-transform:uppercase;margin-bottom:3px}
+    .sq-q{font-family:'Boogaloo',cursive;font-size:24px;color:white;margin-bottom:16px;line-height:1.25}
+    .pts-box{background:rgba(255,214,0,.09);border:1.5px solid rgba(255,214,0,.22);
+      border-radius:13px;padding:10px 14px;margin-bottom:14px}
+    .pts-box-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+    .pts-label{font-size:11px;font-weight:800;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:1px}
+    .pts-count{font-family:'Boogaloo',cursive;font-size:32px;color:#FFD600;line-height:1}
+    .pts-track{height:5px;background:rgba(255,255,255,.08);border-radius:5px}
+    .pts-track-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#FFD600,#FF8F00);transition:width .2s}
+    .tpr{display:flex;align-items:center;gap:10px;
+      background:rgba(255,255,255,.048);border:1px solid rgba(255,255,255,.06);
+      border-radius:14px;padding:10px 12px;margin-bottom:9px}
+    .tpr-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+    .tpr-name{flex:1;color:white;font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .stepper{display:flex;align-items:center;gap:8px}
+    .s-btn{width:36px;height:36px;border-radius:50%;
+      background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.18);
+      color:white;font-size:22px;font-weight:700;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;transition:all .12s;
+      -webkit-tap-highlight-color:transparent;line-height:1}
+    .s-btn:active{transform:scale(.84)}
+    .s-btn.minus:active{background:rgba(255,80,80,.28)}
+    .s-btn.plus:active{background:rgba(80,220,130,.28)}
+    .s-val{font-family:'Boogaloo',cursive;font-size:28px;color:white;min-width:30px;text-align:center}
+    .submit-btn{width:100%;background:linear-gradient(135deg,#FFD600,#FF8F00);border:none;
+      border-radius:16px;color:#1a1000;font-family:'Boogaloo',cursive;font-size:22px;
+      padding:18px;cursor:pointer;box-shadow:0 4px 24px rgba(255,150,0,.38);
+      transition:transform .15s;margin-top:8px}
+    .submit-btn:active{transform:scale(.97)}
+    .submit-btn:disabled{opacity:.45;pointer-events:none}
+
+    /* submitted state */
+    .submitted-card{text-align:center;padding:24px 0 8px}
+    .submitted-icon{font-size:54px;display:block;margin-bottom:8px;animation:wPop .5s cubic-bezier(.34,1.56,.64,1)}
+    .submitted-msg{font-family:'Boogaloo',cursive;font-size:28px;color:white}
+    .submitted-sub{color:rgba(255,255,255,.5);font-size:13px;font-weight:700;margin-top:6px}
+    @keyframes wPop{from{transform:scale(0) rotate(-6deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+
+    /* ── WINNER ── */
+    #screen-winner{position:fixed;inset:0;z-index:200;
+      background:linear-gradient(135deg,#FFD600 0%,#FF9800 55%,#FF5722 100%);
+      display:none;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:32px;overflow:hidden}
+    .w-icon{font-size:76px;margin-bottom:4px;animation:wPop .6s cubic-bezier(.34,1.56,.64,1)}
+    .w-sub{font-size:12px;font-weight:900;color:rgba(0,0,0,.45);letter-spacing:5px;text-transform:uppercase;animation:wPop .6s .1s cubic-bezier(.34,1.56,.64,1) both}
+    .w-name{font-family:'Boogaloo',cursive;font-size:52px;color:#1a1000;text-shadow:3px 3px 0 rgba(255,255,255,.25);margin-bottom:12px;animation:wPop .6s .2s cubic-bezier(.34,1.56,.64,1) both}
+    .w-pts-box{background:rgba(0,0,0,.14);border-radius:18px;padding:14px 32px;margin-bottom:24px;animation:wPop .6s .3s cubic-bezier(.34,1.56,.64,1) both}
+    .w-pts{font-family:'Boogaloo',cursive;font-size:50px;color:white;line-height:1}
+    .w-pts-lbl{font-size:11px;font-weight:900;color:rgba(255,255,255,.6);letter-spacing:2px;text-transform:uppercase}
+    .w-scores{background:rgba(0,0,0,.1);border-radius:14px;padding:12px 20px;width:100%;max-width:300px;animation:wPop .6s .35s cubic-bezier(.34,1.56,.64,1) both}
+    .w-row{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+    .w-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .w-row-name{flex:1;color:rgba(0,0,0,.7);font-size:13px;font-weight:800;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .w-row-val{color:rgba(0,0,0,.75);font-family:'Boogaloo',cursive;font-size:18px}
+    .cpiece{position:absolute;border-radius:2px;animation:cFall linear infinite;pointer-events:none}
+    @keyframes cFall{0%{transform:translateY(-60px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(800deg);opacity:0}}
+  </style>
+</head>
+<body>
+
+<div id="screen-lobby">
+  <div class="lobby-icon">🏄</div>
+  <div class="lobby-logo">WindScore</div>
+  <div class="lobby-msg" id="lobby-msg">
+    <span class="lobby-pulse"></span>Waiting for the game to start…
+  </div>
+</div>
+
+<div id="screen-game">
+  <div class="g-sky">
+    <div class="g-sun"></div>
+    <div id="clouds-container"></div>
+  </div>
+  <div class="g-ocean" id="ocean">
+    <div class="waves-bg" id="waves-bg"></div>
+    <div class="finish-line"><div class="finish-flag">🏁</div></div>
+    <div class="finish-glow"></div>
+    <div id="surfers-container"></div>
+  </div>
+  <div class="g-header">
+    <div class="g-logo">WindScore</div>
+    <div class="round-badge">Round <b id="cur-round">1</b> / <span id="tot-rounds">20</span></div>
+  </div>
+  <div class="g-scores" id="g-scores"></div>
+  <div class="status-bar waiting" id="status-bar">⏳ Waiting for next round…</div>
+</div>
+
+<div id="q-overlay">
+  <div class="q-sheet">
+    <div class="sheet-handle"></div>
+    <div id="overlay-body"></div>
+  </div>
+</div>
+
+<div id="screen-winner">
+  <div id="confetti-container"></div>
+  <div class="w-icon">🏆</div>
+  <div class="w-sub">Winner!</div>
+  <div class="w-name" id="w-name"></div>
+  <div class="w-pts-box">
+    <div class="w-pts" id="w-pts"></div>
+    <div class="w-pts-lbl">Total Points</div>
+  </div>
+  <div class="w-scores" id="w-scores"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const COLORS = ['#FF6B6B','#4ECDC4','#FFD93D','#A29BFE','#6BCB77','#FF9A3C'];
+const socket = io({ query: { role: 'player' } });
+
+let teams = [];
+let roundAlloc = [];
+let hasSubmitted = false;
+let surferEls = [];
+
+// ── helpers ──
+function darken(hex, a) {
+  let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  r=Math.max(0,Math.floor(r*(1-a))); g=Math.max(0,Math.floor(g*(1-a))); b=Math.max(0,Math.floor(b*(1-a)));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+function surferSVG(color) {
+  const d=darken(color,.25);
+  return `<svg width="58" height="78" viewBox="0 0 58 78" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="29" cy="71" rx="25" ry="5.5" fill="${d}"/>
+    <ellipse cx="29" cy="70" rx="21" ry="4" fill="${color}"/>
+    <ellipse cx="29" cy="69.5" rx="17" ry="2.5" fill="rgba(255,255,255,0.28)"/>
+    <rect x="26.5" y="16" width="3" height="54" rx="1.5" fill="${d}"/>
+    <path d="M27 18 L27 60 L52 46 Z" fill="${color}"/>
+    <path d="M27 18 L27 60 L52 46 Z" fill="rgba(255,255,255,0.18)"/>
+    <path d="M27 32 L27 50 L44 43 Z" fill="rgba(255,255,255,0.22)"/>
+    <line x1="27" y1="56" x2="52" y2="46" stroke="${d}" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="33" cy="50" r="5.5" fill="#FFCBA4"/>
+    <path d="M28 47 Q33 42 38 47" fill="${color}"/>
+    <rect x="29.5" y="55" width="7" height="9" rx="3.5" fill="${color}"/>
+    <line x1="30" y1="58" x2="23" y2="54" stroke="#FFCBA4" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="37" y1="58" x2="43" y2="52" stroke="#FFCBA4" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="31" y1="64" x2="27" y2="71" stroke="${d}" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="35" y1="64" x2="39" y2="71" stroke="${d}" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+}
+function scoreToLeft(score) {
+  const pct = 4 + (Math.min(score,25)/25)*84;
+  return `calc(${pct}% - 29px)`;
+}
+
+// ── scene ──
+function buildClouds() {
+  const c=document.getElementById('clouds-container'); c.innerHTML='';
+  [{top:'6%',w:90,h:28,dur:55,del:0},{top:'12%',w:60,h:20,dur:70,del:-20},
+   {top:'5%',w:110,h:32,dur:80,del:-35},{top:'18%',w:75,h:22,dur:65,del:-10}].forEach(cd=>{
+    const el=document.createElement('div'); el.className='cloud';
+    el.style.cssText=`top:${cd.top};width:${cd.w}px;height:${cd.h}px;animation-duration:${cd.dur}s;animation-delay:${cd.del}s`;
+    ['55','40'].forEach((pct,i)=>{const b=document.createElement('div');b.style.cssText=`width:${cd.w*+pct/100}px;height:${cd.h*1.4}px;border-radius:50%;top:-${cd.h*.5}px;left:${cd.w*(i?0.5:0.2)}px;position:absolute;background:rgba(255,255,255,0.82)`;el.appendChild(b)});
+    c.appendChild(el);
+  });
+}
+function buildWaves() {
+  const bg=document.getElementById('waves-bg'); bg.innerHTML='';
+  const makeWave=(html,cls)=>{const d=document.createElement('div');d.className='wave-svg '+cls;d.innerHTML=html+html;bg.appendChild(d)};
+  makeWave(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none" style="display:block;width:100%;height:60px"><path d="M0,30 C180,55 360,5 540,30 C720,55 900,5 1080,30 C1260,55 1350,45 1440,30 L1440,60 L0,60 Z" fill="rgba(255,255,255,0.11)"/></svg>`,'w1');
+  makeWave(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 50" preserveAspectRatio="none" style="display:block;width:100%;height:50px"><path d="M0,25 C240,45 480,5 720,25 C960,45 1200,5 1440,25 L1440,50 L0,50 Z" fill="rgba(255,255,255,0.07)"/></svg>`,'w2');
+  makeWave(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 40" preserveAspectRatio="none" style="display:block;width:100%;height:40px"><path d="M0,20 C360,38 720,2 1080,20 C1260,30 1350,25 1440,20 L1440,40 L0,40 Z" fill="rgba(255,255,255,0.05)"/></svg>`,'w3');
+}
+function buildSurfers() {
+  const cont=document.getElementById('surfers-container'); cont.innerHTML=''; surferEls=[];
+  const ocean=document.getElementById('ocean');
+  const N=teams.length; const oH=ocean.clientHeight||300;
+  teams.forEach((t,i)=>{
+    const wrap=document.createElement('div'); wrap.className='surfer-wrap'; wrap.id='surfer-'+i;
+    const laneH=oH/N; wrap.style.top=(laneH*i+(laneH-78)/2)+'px'; wrap.style.left=scoreToLeft(t.score);
+    const anim=document.createElement('div'); anim.className='surfer-anim'; anim.style.animationDelay=(i*.45)+'s'; anim.innerHTML=surferSVG(t.color);
+    const label=document.createElement('div'); label.className='surfer-label'; label.textContent=t.name;
+    wrap.appendChild(label); wrap.appendChild(anim); cont.appendChild(wrap); surferEls.push(wrap);
+  });
+}
+function moveSurfers(prev) {
+  teams.forEach((t,i)=>{
+    if (!surferEls[i]) return;
+    surferEls[i].style.left=scoreToLeft(t.score);
+    const gained=t.score-(prev[i]||0);
+    if (gained>0) setTimeout(()=>{
+      const pop=document.createElement('div'); pop.className='score-pop'; pop.textContent='+'+gained;
+      surferEls[i].appendChild(pop); setTimeout(()=>pop.remove(),1700);
+    },i*80);
+  });
+}
+function renderScores() {
+  const el=document.getElementById('g-scores'); el.innerHTML='<div class="gs-title">SCORES</div>';
+  [...teams].sort((a,b)=>b.score-a.score).forEach(t=>{
+    const r=document.createElement('div'); r.className='gs-row';
+    r.innerHTML=`<div class="gs-dot" style="background:${t.color}"></div><div class="gs-name">${t.name}</div><div class="gs-val">${t.score}</div>`;
+    el.appendChild(r);
+  });
+}
+
+// ── round overlay ──
+function showRoundOverlay(data) {
+  hasSubmitted=false;
+  roundAlloc=teams.map(()=>0);
+  const body=document.getElementById('overlay-body');
+  body.innerHTML=`
+    <div class="sq-round">Round ${data.round} of ${data.total}</div>
+    <div class="sq-q">${data.question}</div>
+    <div class="pts-box">
+      <div class="pts-box-top"><span class="pts-label">Points left</span><span class="pts-count" id="pts-left">10</span></div>
+      <div class="pts-track"><div class="pts-track-fill" id="pts-bar" style="width:100%"></div></div>
+    </div>
+    <div id="tpr-cont"></div>
+    <button class="submit-btn" id="sub-btn" onclick="submitPoints()">✓ Submit Points</button>`;
+  const cont=document.getElementById('tpr-cont');
+  teams.forEach((t,i)=>{
+    const row=document.createElement('div'); row.className='tpr';
+    row.innerHTML=`<div class="tpr-dot" style="background:${t.color}"></div><div class="tpr-name">${t.name}</div>
+      <div class="tpr-cur" style="font-size:11px;color:rgba(255,255,255,.35);font-weight:700;white-space:nowrap">${t.score} pts</div>
+      <div class="stepper">
+        <button class="s-btn minus" ontouchstart="" onclick="chg(${i},-1)">−</button>
+        <div class="s-val" id="al-${i}">0</div>
+        <button class="s-btn plus"  ontouchstart="" onclick="chg(${i},+1)">＋</button>
+      </div>`;
+    cont.appendChild(row);
+  });
+  document.getElementById('q-overlay').style.display='flex';
+  const sb=document.getElementById('status-bar');
+  sb.className='status-bar open'; sb.textContent='🏄 Award points now!';
+}
+function showSubmitted() {
+  document.getElementById('overlay-body').innerHTML=`
+    <div class="submitted-card">
+      <span class="submitted-icon">✅</span>
+      <div class="submitted-msg">Points submitted!</div>
+      <div class="submitted-sub">Waiting for the next round…</div>
+    </div>`;
+  const sb=document.getElementById('status-bar');
+  sb.className='status-bar submitted'; sb.textContent='✅ Points submitted!';
+}
+window.chg=(i,delta)=>{
+  const used=roundAlloc.reduce((s,v)=>s+v,0); const nv=roundAlloc[i]+delta;
+  if (nv<0 || (delta>0 && used>=10)) return;
+  roundAlloc[i]=nv; document.getElementById('al-'+i).textContent=nv;
+  const left=10-roundAlloc.reduce((s,v)=>s+v,0);
+  document.getElementById('pts-left').textContent=left;
+  document.getElementById('pts-bar').style.width=(left/10*100)+'%';
+};
+window.submitPoints=()=>{
+  if (hasSubmitted) return;
+  hasSubmitted=true;
+  socket.emit('player:submit', roundAlloc);
+  showSubmitted();
+};
+
+// ── winner ──
+function showWinner(data) {
+  document.getElementById('q-overlay').style.display='none';
+  document.getElementById('screen-game').style.display='none';
+  const ws=document.getElementById('screen-winner');
+  document.getElementById('w-name').textContent=data.winner.name;
+  document.getElementById('w-pts').textContent=data.winner.score;
+  const wb=document.getElementById('w-scores'); wb.innerHTML='';
+  [...data.teams].sort((a,b)=>b.score-a.score).forEach(t=>{
+    const r=document.createElement('div'); r.className='w-row';
+    r.innerHTML=`<div class="w-dot" style="background:${t.color}"></div><div class="w-row-name">${t.name}</div><div class="w-row-val">${t.score}</div>`;
+    wb.appendChild(r);
+  });
+  buildConfetti(); ws.style.display='flex';
+  // winner glow
+  const wi=data.teams.indexOf(data.winner);
+  if (surferEls[wi]) { const g=document.createElement('div'); g.className='winner-ring'; surferEls[wi].appendChild(g); }
+}
+function buildConfetti() {
+  const c=document.getElementById('confetti-container'); c.innerHTML='';
+  const cols=['#FFD600','#FF6B6B','#4ECDC4','#A29BFE','#6BCB77','white','#FF9A3C'];
+  for (let i=0;i<70;i++) {
+    const p=document.createElement('div'); p.className='cpiece';
+    const sz=6+Math.random()*9;
+    p.style.cssText=`width:${sz}px;height:${sz}px;background:${cols[Math.floor(Math.random()*cols.length)]};left:${Math.random()*100}%;animation-duration:${2.5+Math.random()*3}s;animation-delay:${Math.random()*2}s;border-radius:${Math.random()>.5?'50%':'2px'}`;
+    c.appendChild(p);
+  }
+}
+
+// ── socket events ──
+socket.on('state', s => {
+  document.getElementById('cur-round').textContent=s.currentRound;
+  document.getElementById('tot-rounds').textContent=s.totalRounds;
+  // Update team scores if game running
+  if (s.phase!=='lobby' && teams.length===s.teams.length) {
+    const prev=teams.map(t=>t.score);
+    s.teams.forEach((t,i)=>{ if(teams[i]) teams[i].score=t.score; });
+    renderScores();
+    moveSurfers(prev);
+  }
+});
+
+socket.on('game-started', () => {
+  document.getElementById('screen-lobby').style.display='none';
+  document.getElementById('screen-game').style.display='block';
+  document.getElementById('q-overlay').style.display='none';
+  buildClouds(); buildWaves();
+});
+
+socket.on('round-opened', data => {
+  teams=data.teams;
+  // First round: build surfers if needed
+  if (!surferEls.length) buildSurfers();
+  renderScores();
+  showRoundOverlay(data);
+});
+
+socket.on('round-closed', data => {
+  const prev=teams.map(t=>t.score);
+  teams=data.teams;
+  moveSurfers(prev); renderScores();
+  document.getElementById('q-overlay').style.display='none';
+  const sb=document.getElementById('status-bar');
+  sb.className='status-bar waiting'; sb.textContent='⏳ Waiting for next round…';
+});
+
+socket.on('game-over', showWinner);
+
+socket.on('submitted', () => showSubmitted());
+
+socket.on('reset', () => {
+  document.getElementById('screen-winner').style.display='none';
+  document.getElementById('screen-game').style.display='none';
+  document.getElementById('screen-lobby').style.display='flex';
+  document.getElementById('q-overlay').style.display='none';
+  teams=[]; surferEls=[]; hasSubmitted=false; roundAlloc=[];
+});
+</script>
+</body>
+</html>
